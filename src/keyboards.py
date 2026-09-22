@@ -23,17 +23,16 @@ def question_kb(index: int, answers: str) -> InlineKeyboardMarkup:
     Благодаря этому бот не хранит состояние в памяти и одинаково работает
     и на сервере, и в облачной функции, которая живет доли секунды.
     """
-    rows = []
-    for opt_index, (letter, label, _points) in enumerate(texts.QUESTIONS[index]["options"]):
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text=f"{letter}. {label}",
-                    callback_data=f"q:{index + 1}:{answers}{opt_index}",
-                )
-            ]
+    row = [
+        InlineKeyboardButton(
+            text=letter,
+            callback_data=f"q:{index + 1}:{answers}{opt_index}",
         )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+        for opt_index, (letter, _label, _points) in enumerate(
+            texts.QUESTIONS[index]["options"]
+        )
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[row])
 
 
 def result_kb(zone: dict) -> InlineKeyboardMarkup:
@@ -79,7 +78,7 @@ def lessons_kb(current: int | None = None) -> InlineKeyboardMarkup:
         rows.append(
             [
                 InlineKeyboardButton(
-                    text=f"{mark}Урок {lesson['n']}. {lesson['title']}",
+                    text=f"{mark}{lesson['n']}. {lesson['title']}",
                     callback_data=f"course:lesson:{lesson['n']}",
                 )
             ]

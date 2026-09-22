@@ -16,9 +16,19 @@ router = Router()
 
 
 def question_text(index: int) -> str:
+    """Вопрос вместе с вариантами ответов.
+
+    Варианты стоят в тексте сообщения, а не на кнопках: на телефоне Telegram
+    обрезает длинные подписи кнопок многоточием, и человек не видит,
+    за что голосует.
+    """
     q = texts.QUESTIONS[index]
+    options = "\n\n".join(
+        f"<b>{letter}.</b> {label}" for letter, label, _points in q["options"]
+    )
     return (
-        f"<b>{q['title']}</b>  ({index + 1}/{len(texts.QUESTIONS)})\n\n{q['text']}"
+        f"<b>{q['title']}</b>  ({index + 1}/{len(texts.QUESTIONS)})\n\n"
+        f"{q['text']}\n\n{options}"
     )
 
 
