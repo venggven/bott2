@@ -98,8 +98,15 @@ async def quiz_step(call: CallbackQuery, bot: Bot) -> None:
     zone = texts.zone_by_score(score)
     user = call.from_user
     await db.save_result(user.id, score, zone["code"], letters)
-    await call.message.edit_text(zone["text"], reply_markup=kb.result_kb(zone))
+    await call.message.edit_text(
+        zone["text"],
+        reply_markup=kb.result_kb(zone) if config.OFFER_ENABLED else None,
+    )
     await call.answer()
+
+    if not config.OFFER_ENABLED:
+        # Продукта еще нет — вместо продажи мягкое окончание
+        await call.message.answer(texts.TEST_ONLY_ENDING)
 
     username = f"@{user.username}" if user.username else "без юзернейма"
     await notify_admins(
@@ -111,6 +118,11 @@ async def quiz_step(call: CallbackQuery, bot: Bot) -> None:
 
 @router.callback_query(F.data == "offer:show")
 async def offer_show(call: CallbackQuery) -> None:
+    if not config.OFFER_ENABLED:
+        # Человек нажал кнопку в старом сообщении, когда продажа уже выключена
+        await call.message.answer(texts.TEST_ONLY_ENDING)
+        await call.answer()
+        return
     await db.mark_offer_shown(call.from_user.id)
     await call.message.answer(texts.OFFER, reply_markup=kb.offer_kb())
     await call.answer()
@@ -118,6 +130,10 @@ async def offer_show(call: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "offer:pay")
 async def offer_pay(call: CallbackQuery, bot: Bot) -> None:
+    if not config.OFFER_ENABLED:
+        await call.message.answer(texts.TEST_ONLY_ENDING)
+        await call.answer()
+        return
     user = call.from_user
     await db.mark_pay_click(user.id)
 

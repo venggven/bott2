@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 
 
 async def send_followups(bot: Bot) -> int:
+    if not config.OFFER_ENABLED:
+        # Дожим зовет купить — пока продукта нет, он не нужен
+        return 0
     sent = 0
     for user in await db.users_for_followup():
         user_id = user["user_id"]
