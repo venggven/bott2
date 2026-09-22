@@ -8,7 +8,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, Message
 
 import config
-from src import keyboards as kb, storage as db, texts
+from src import keyboards as kb, storage as db, texts, ui
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -169,6 +169,7 @@ async def cmd_whoami(message: Message) -> None:
 
 @router.message(F.text)
 async def fallback(message: Message, bot: Bot) -> None:
+    await ui.typing(message)
     await message.answer(
         texts.UNKNOWN_MESSAGE if config.OFFER_ENABLED else texts.UNKNOWN_MESSAGE_NO_OFFER
     )

@@ -9,7 +9,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 
 import config
-from src import keyboards as kb, storage as db, texts
+from src import keyboards as kb, storage as db, texts, ui
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -27,7 +27,8 @@ def question_text(index: int) -> str:
         f"<b>{letter}.</b> {label}" for letter, label, _points in q["options"]
     )
     return (
-        f"<b>{q['title']}</b>  ({index + 1}/{len(texts.QUESTIONS)})\n\n"
+        f"<b>{q['title']}</b>\n"
+        f"{ui.progress_bar(index + 1, len(texts.QUESTIONS))}\n\n"
         f"{q['text']}\n\n{options}"
     )
 
@@ -44,6 +45,7 @@ async def notify_admins(bot: Bot, text: str) -> None:
 async def cmd_start(message: Message) -> None:
     user = message.from_user
     await db.upsert_user(user.id, user.username, user.first_name)
+    await ui.typing(message)
     await message.answer(texts.WELCOME, reply_markup=kb.start_kb())
 
 
@@ -99,13 +101,14 @@ async def quiz_step(call: CallbackQuery, bot: Bot) -> None:
     user = call.from_user
     await db.save_result(user.id, score, zone["code"], letters)
     await call.message.edit_text(
-        zone["text"],
+        f"{ui.battery_bar(zone['percent'])}\n\n{zone['text']}",
         reply_markup=kb.result_kb(zone) if config.OFFER_ENABLED else None,
     )
     await call.answer()
 
     if not config.OFFER_ENABLED:
         # Продукта еще нет — вместо продажи мягкое окончание
+        await ui.typing(call.message, 1.4)
         await call.message.answer(texts.TEST_ONLY_ENDING)
 
     username = f"@{user.username}" if user.username else "без юзернейма"
@@ -124,6 +127,7 @@ async def offer_show(call: CallbackQuery) -> None:
         await call.answer()
         return
     await db.mark_offer_shown(call.from_user.id)
+    await ui.typing(call.message, 1.4)
     await call.message.answer(texts.OFFER, reply_markup=kb.offer_kb())
     await call.answer()
 
