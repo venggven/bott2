@@ -57,10 +57,22 @@ async def send_lesson(bot: Bot, chat_id: int, number: int) -> None:
         await bot.send_message(chat_id, texts.COURSE_OUTRO)
 
 
+async def deny_access(message_or_call) -> None:
+    """Ответ тому, у кого доступа нет.
+
+    Пока продажа выключена, цену и кнопку оплаты показывать нельзя —
+    продукта еще не существует.
+    """
+    if config.OFFER_ENABLED:
+        await message_or_call.answer(texts.NO_ACCESS, reply_markup=kb.no_access_kb())
+    else:
+        await message_or_call.answer(texts.TEST_ONLY_ENDING)
+
+
 @router.message(Command("course"))
 async def cmd_course(message: Message, bot: Bot) -> None:
     if not await db.has_access(message.from_user.id):
-        await message.answer(texts.NO_ACCESS, reply_markup=kb.no_access_kb())
+        await deny_access(message)
         return
     await send_course_menu(bot, message.chat.id)
 
@@ -68,7 +80,7 @@ async def cmd_course(message: Message, bot: Bot) -> None:
 @router.callback_query(F.data == "course:menu")
 async def course_menu(call: CallbackQuery, bot: Bot) -> None:
     if not await db.has_access(call.from_user.id):
-        await call.message.answer(texts.NO_ACCESS, reply_markup=kb.no_access_kb())
+        await deny_access(call.message)
         await call.answer()
         return
     await call.message.answer(
@@ -80,7 +92,7 @@ async def course_menu(call: CallbackQuery, bot: Bot) -> None:
 @router.callback_query(F.data.startswith("course:lesson:"))
 async def course_lesson(call: CallbackQuery, bot: Bot) -> None:
     if not await db.has_access(call.from_user.id):
-        await call.message.answer(texts.NO_ACCESS, reply_markup=kb.no_access_kb())
+        await deny_access(call.message)
         await call.answer()
         return
     number = int(call.data.rsplit(":", 1)[1])
@@ -157,7 +169,9 @@ async def cmd_whoami(message: Message) -> None:
 
 @router.message(F.text)
 async def fallback(message: Message, bot: Bot) -> None:
-    await message.answer(texts.UNKNOWN_MESSAGE)
+    await message.answer(
+        texts.UNKNOWN_MESSAGE if config.OFFER_ENABLED else texts.UNKNOWN_MESSAGE_NO_OFFER
+    )
     if is_admin(message.from_user.id):
         return
     user = message.from_user
